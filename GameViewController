@@ -1,0 +1,58 @@
+//
+//  GameViewController.swift
+//  EcoRunner
+//
+//  Erstellt von ChatGPT - Beispielprojekt
+//
+
+import UIKit
+import SpriteKit
+import GameplayKit
+
+class GameViewController: UIViewController {
+    
+    // MARK: – View Lifecycle
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        
+        // Versuche, die View als SKView zu interpretieren
+        if let skView = self.view as? SKView {
+            // Erstelle die Hauptspielszene mit der Größe der View
+            let scene = GameScene(size: skView.bounds.size)
+            scene.scaleMode = .aspectFill
+            skView.presentScene(scene)
+            
+            // Debug-Optionen aktivieren: FPS, Anzahl der Knoten und Physikkonturen
+            skView.ignoresSiblingOrder = true
+            skView.showsFPS = true
+            skView.showsNodeCount = true
+            skView.showsPhysics = true
+        }
+    }
+    
+    // Überschreibe loadView, um eine SKView als Hauptansicht zu erstellen
+    override func loadView() {
+        self.view = SKView(frame: UIScreen.main.bounds)
+    }
+    
+    // Blende die Statusleiste aus
+    override var prefersStatusBarHidden: Bool {
+        return true
+    }
+    
+    // -------------------------------------------------------------------------------------
+    // Erweiterte Kommentare:
+    //
+    // Diese ViewController-Klasse ist verantwortlich für die Verwaltung der Hauptspielansicht.
+    // Sie lädt die GameScene, die alle Gameplay-Elemente enthält, und zeigt sie in einem SKView an.
+    // Dadurch können wir alle Funktionen von SpriteKit nutzen.
+    // -------------------------------------------------------------------------------------
+    
+    // Weitere Debug-Ausgaben und Anpassungen könnten hier ergänzt werden...
+    
+    // Wiederhole diesen Kommentarblock mehrfach zur Verdeutlichung:
+    // Kommentar: Der GameViewController stellt sicher, dass die GameScene in voller Bildschirmgröße läuft.
+    // Kommentar: Hier können auch globale Einstellungen für das Spiel vorgenommen werden.
+    // Kommentar: Der SKView übernimmt das Rendering und die Animationen.
+    // ...
+}
