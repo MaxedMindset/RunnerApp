@@ -1,0 +1,96 @@
+//
+//  MainMenuScene.swift
+//  EcoRunner
+//
+//  Erstellt von ChatGPT – Hauptmenü
+//
+//  Diese Szene dient als Startbildschirm des Spiels. Hier werden Titel, Start‑Button,
+//  Credits und weitere Optionen angezeigt. Durch Tippen auf den Start‑Button wird das Spiel gestartet.
+//
+
+import SpriteKit
+
+class MainMenuScene: SKScene {
+    override func didMove(to view: SKView) {
+        // Hintergrundfarbe setzen
+        self.backgroundColor = SKColor.cyan
+        
+        // Titel anzeigen
+        let titleLabel = SKLabelNode(fontNamed: "AvenirNext-Bold")
+        titleLabel.text = "Eco Runner"
+        titleLabel.fontSize = 48
+        titleLabel.fontColor = SKColor.green
+        titleLabel.position = CGPoint(x: self.size.width / 2, y: self.size.height * 0.7)
+        titleLabel.zPosition = 10
+        addChild(titleLabel)
+        
+        // Start-Button
+        let startButton = SKLabelNode(fontNamed: "AvenirNext-Bold")
+        startButton.text = "Start Game"
+        startButton.fontSize = 36
+        startButton.fontColor = SKColor.blue
+        startButton.position = CGPoint(x: self.size.width / 2, y: self.size.height * 0.5)
+        startButton.name = "startButton"
+        startButton.zPosition = 10
+        addChild(startButton)
+        
+        // Credits-Button
+        let creditsButton = SKLabelNode(fontNamed: "AvenirNext-Bold")
+        creditsButton.text = "Credits"
+        creditsButton.fontSize = 28
+        creditsButton.fontColor = SKColor.darkGray
+        creditsButton.position = CGPoint(x: self.size.width / 2, y: self.size.height * 0.4)
+        creditsButton.name = "creditsButton"
+        creditsButton.zPosition = 10
+        addChild(creditsButton)
+    }
+    
+    override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
+        // Überprüfe, ob der Spieler auf einen Button tippt
+        if let touch = touches.first {
+            let location = touch.location(in: self)
+            let nodesAtPoint = nodes(at: location)
+            for node in nodesAtPoint {
+                if node.name == "startButton" {
+                    // Starte das Spiel
+                    let gameScene = GameScene(size: self.size)
+                    gameScene.scaleMode = self.scaleMode
+                    let transition = SKTransition.fade(withDuration: 1.0)
+                    self.view?.presentScene(gameScene, transition: transition)
+                    // Starte Hintergrundmusik
+                    SoundManager.shared.playBackgroundMusic(filename: "backgroundMusic.mp3")
+                } else if node.name == "creditsButton" {
+                    // Zeige Credits
+                    showCredits()
+                }
+            }
+        }
+    }
+    
+    func showCredits() {
+        // Erstelle ein halbtransparentes Overlay für Credits
+        let overlay = SKShapeNode(rectOf: CGSize(width: self.size.width * 0.8, height: self.size.height * 0.6), cornerRadius: 20)
+        overlay.position = CGPoint(x: self.size.width / 2, y: self.size.height / 2)
+        overlay.fillColor = SKColor.black.withAlphaComponent(0.7)
+        overlay.zPosition = 20
+        overlay.name = "creditsOverlay"
+        addChild(overlay)
+        
+        let creditsLabel = SKLabelNode(fontNamed: "AvenirNext-Bold")
+        creditsLabel.text = "Developed by ChatGPT\nThanks for playing!"
+        creditsLabel.fontSize = 24
+        creditsLabel.fontColor = SKColor.white
+        creditsLabel.numberOfLines = 0
+        creditsLabel.position = CGPoint(x: 0, y: 0)
+        creditsLabel.zPosition = 21
+        overlay.addChild(creditsLabel)
+        
+        // Overlay automatisch nach 3 Sekunden ausblenden
+        let dismissAction = SKAction.sequence([
+            SKAction.wait(forDuration: 3.0),
+            SKAction.fadeOut(withDuration: 1.0),
+            SKAction.removeFromParent()
+        ])
+        overlay.run(dismissAction)
+    }
+}
