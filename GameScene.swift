@@ -2,14 +2,19 @@
 //  GameScene.swift
 //  EcoRunner
 //
-//  Erstellt von ChatGPT - Beispielprojekt
+//  Erstellt von ChatGPT – Erweiterte Version des Spiels
+//
+//  Diese Szene beinhaltet den gesamten Spielablauf:
+//  - Integration des Helden, des Environments, von Hindernissen und PowerUps
+//  - Anzeige von Score- und Eco-Score
+//  - Pause-Funktionalität mit Overlay
+//  - Game Over-Logik und Neustart
+//  - Dynamische Updates und Kollisionsbehandlung
 //
 
 import SpriteKit
 import GameplayKit
 
-/// Die Hauptspielszene, in der der gesamte Spielablauf stattfindet.
-/// Hier werden der Held, die Umgebung, Hindernisse, PowerUps und die Kollisionslogik verwaltet.
 class GameScene: SKScene, SKPhysicsContactDelegate {
     
     // MARK: – Physikkategorien als Bitmasken
@@ -40,9 +45,12 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
     var obstacleTimer: TimeInterval = 0
     var powerUpTimer: TimeInterval = 0
     
+    // Pause-Management
+    var isGamePaused: Bool = false
+    var pauseOverlay: SKNode?
+    
     // MARK: – didMove(to:) wird aufgerufen, wenn die Szene präsentiert wird
     override func didMove(to view: SKView) {
-        // Hintergrundfarbe setzen
         self.backgroundColor = SKColor.cyan
         
         // Physik-Welt konfigurieren
@@ -64,18 +72,20 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         // Score-Labels einrichten
         setupLabels()
         
+        // Pause-Button einrichten
+        setupPauseButton()
+        
         // Zeitvariablen initialisieren
         lastUpdateTime = 0
         obstacleTimer = 0
         powerUpTimer = 0
         
-        // Zusätzliche Startkonfigurationen
-        // (z. B. Musik, Soundeffekte, weitere Hintergrundobjekte)
+        // Starte Hintergrundmusik (falls noch nicht gestartet)
+        SoundManager.shared.playBackgroundMusic(filename: "backgroundMusic.mp3")
     }
     
     // MARK: – Setup des Bodens
     func setupGround() {
-        // Erstelle ein Bild des Bodens aus einer Textur
         let ground = SKSpriteNode(imageNamed: "ground")
         ground.anchorPoint = CGPoint(x: 0, y: 0)
         ground.position = CGPoint(x: 0, y: 0)
@@ -109,30 +119,31 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         addChild(ecoScoreLabel)
     }
     
+    // MARK: – Setup Pause-Button
+    func setupPauseButton() {
+        let pauseButton = SKLabelNode(fontNamed: "AvenirNext-Bold")
+        pauseButton.text = "❚❚"
+        pauseButton.fontSize = 36
+        pauseButton.fontColor = SKColor.black
+        pauseButton.position = CGPoint(x: self.size.width - 40, y: self.size.height - 40)
+        pauseButton.name = "pauseButton"
+        pauseButton.zPosition = 50
+        addChild(pauseButton)
+    }
+    
     // MARK: – Update-Schleife
     override func update(_ currentTime: TimeInterval) {
-        // Initialer Zeitstempel
-        if lastUpdateTime == 0 {
-            lastUpdateTime = currentTime
-        }
-        
-        // Berechne die verstrichene Zeit (deltaTime)
+        if lastUpdateTime == 0 { lastUpdateTime = currentTime }
         dt = currentTime - lastUpdateTime
         lastUpdateTime = currentTime
         
-        // Falls das Spiel bereits vorbei ist, nichts weiter tun
-        if gameOverState {
-            return
-        }
+        if gameOverState || isGamePaused { return }
         
-        // Score erhöhen basierend auf der Zeit
+        // Score erhöhen
         score += Int(dt * 100)
         scoreLabel.text = "Score: \(score)"
         
-        // Update des Helden (könnte zukünftig komplexere Logik enthalten)
-        hero.update()
-        
-        // Update der Umgebung (Parallax-Scrolling)
+        hero.update(deltaTime: dt)
         environment.update(deltaTime: dt, playerSpeed: 200)
         
         // Spawnen von Hindernissen
@@ -148,18 +159,15 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
             spawnPowerUp()
             powerUpTimer = 0
         }
-        
-        // Zusätzliche Update-Logik kann hier ergänzt werden
     }
     
     // MARK: – Hindernisse spawnen
     func spawnObstacle() {
         let obstacleSize = CGSize(width: 50, height: 50)
-        let yPosition: CGFloat = 110  // Position knapp über dem Boden
+        let yPosition: CGFloat = 110  // knapp über dem Boden
         let spawnX = self.size.width + obstacleSize.width
         let obstacle = Obstacle(position: CGPoint(x: spawnX, y: yPosition), size: obstacleSize)
         addChild(obstacle)
-        
         let duration = TimeInterval(4.0)
         obstacle.startMoving(withDuration: duration, sceneWidth: self.size.width)
     }
@@ -171,19 +179,90 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         let spawnX = self.size.width + powerUpSize.width
         let powerUp = PowerUp(position: CGPoint(x: spawnX, y: randomY), size: powerUpSize)
         addChild(powerUp)
-        
         let duration = TimeInterval(6.0)
         powerUp.startMoving(withDuration: duration, sceneWidth: self.size.width)
     }
     
     // MARK: – Touch-Handling
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
-        // Bei Game Over: Neustart des Spiels
-        if gameOverState {
-            restartGame()
-        } else {
-            // Andernfalls lasse den Helden springen
+        if gameOverState { restartGame(); return }
+        if let touch = touches.first {
+            let location = touch.location(in: self)
+            let touchedNodes = nodes(at: location)
+            // Überprüfe, ob der Pause-Button berührt wurde
+            for node in touchedNodes {
+                if node.name == "pauseButton" {
+                    togglePause()
+                    return
+                }
+            }
+            // Sonst: lasse den Helden springen
             hero.jump()
+        }
+    }
+    
+    // MARK: – Pause-Management
+    func togglePause() {
+        isGamePaused = !isGamePaused
+        self.isPaused = isGamePaused
+        if isGamePaused {
+            // Erstelle ein Pause-Overlay
+            let overlay = SKShapeNode(rectOf: CGSize(width: self.size.width * 0.8, height: self.size.height * 0.5), cornerRadius: 20)
+            overlay.position = CGPoint(x: self.size.width / 2, y: self.size.height / 2)
+            overlay.fillColor = SKColor.black.withAlphaComponent(0.7)
+            overlay.zPosition = 100
+            overlay.name = "pauseOverlay"
+            
+            // Resume-Button
+            let resumeLabel = SKLabelNode(fontNamed: "AvenirNext-Bold")
+            resumeLabel.text = "Resume"
+            resumeLabel.fontSize = 32
+            resumeLabel.fontColor = SKColor.white
+            resumeLabel.position = CGPoint(x: 0, y: 20)
+            resumeLabel.name = "resumeButton"
+            resumeLabel.zPosition = 101
+            overlay.addChild(resumeLabel)
+            
+            // Main Menu-Button
+            let menuLabel = SKLabelNode(fontNamed: "AvenirNext-Bold")
+            menuLabel.text = "Main Menu"
+            menuLabel.fontSize = 32
+            menuLabel.fontColor = SKColor.white
+            menuLabel.position = CGPoint(x: 0, y: -20)
+            menuLabel.name = "menuButton"
+            menuLabel.zPosition = 101
+            overlay.addChild(menuLabel)
+            
+            addChild(overlay)
+            pauseOverlay = overlay
+            // Stoppe Hintergrundmusik kurz (optional)
+            SoundManager.shared.backgroundMusicPlayer?.setVolume(0.2, fadeDuration: 0.5)
+        } else {
+            // Entferne das Pause-Overlay
+            pauseOverlay?.removeFromParent()
+            pauseOverlay = nil
+            // Stelle die Hintergrundmusik wieder her
+            SoundManager.shared.backgroundMusicPlayer?.setVolume(0.5, fadeDuration: 0.5)
+        }
+    }
+    
+    // Überschreibe touchesEnded, um Pause-Overlay-Touches zu behandeln
+    override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
+        if isGamePaused, let touch = touches.first {
+            let location = touch.location(in: self)
+            let nodesAtPoint = nodes(at: location)
+            for node in nodesAtPoint {
+                if node.name == "resumeButton" {
+                    togglePause()
+                } else if node.name == "menuButton" {
+                    // Wechsle zurück ins Hauptmenü
+                    let mainMenu = MainMenuScene(size: self.size)
+                    mainMenu.scaleMode = self.scaleMode
+                    let transition = SKTransition.fade(withDuration: 1.0)
+                    self.view?.presentScene(mainMenu, transition: transition)
+                    SoundManager.shared.stopBackgroundMusic()
+                }
+            }
         }
     }
     
@@ -192,7 +271,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         var firstBody: SKPhysicsBody
         var secondBody: SKPhysicsBody
         
-        // Sortiere die beteiligten Körper, sodass der Spieler immer "first" ist
+        // Sortiere, sodass der Spieler immer first ist
         if contact.bodyA.categoryBitMask < contact.bodyB.categoryBitMask {
             firstBody = contact.bodyA
             secondBody = contact.bodyB
@@ -201,21 +280,21 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
             secondBody = contact.bodyA
         }
         
-        // Kontakt zwischen Spieler und Hindernis → Game Over
-        if firstBody.categoryBitMask == PhysicsCategory.player && secondBody.categoryBitMask == PhysicsCategory.obstacle {
+        if firstBody.categoryBitMask == PhysicsCategory.player &&
+            secondBody.categoryBitMask == PhysicsCategory.obstacle {
             triggerGameOver()
         }
         
-        // Kontakt zwischen Spieler und PowerUp → PowerUp einsammeln
-        if firstBody.categoryBitMask == PhysicsCategory.player && secondBody.categoryBitMask == PhysicsCategory.powerUp {
+        if firstBody.categoryBitMask == PhysicsCategory.player &&
+            secondBody.categoryBitMask == PhysicsCategory.powerUp {
             if let powerUpNode = secondBody.node {
                 collectPowerUp(powerUpNode)
             }
         }
         
-        // Kontakt zwischen Spieler und Boden → Landevorgang
-        if firstBody.categoryBitMask == PhysicsCategory.player && secondBody.categoryBitMask == PhysicsCategory.ground {
-            if hero.isJumping {
+        if firstBody.categoryBitMask == PhysicsCategory.player &&
+            secondBody.categoryBitMask == PhysicsCategory.ground {
+            if hero.currentState == .jumping {
                 hero.landed()
             }
         }
@@ -226,12 +305,13 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         ecoScore += 10
         ecoScoreLabel.text = "Eco: \(ecoScore)"
         
-        // Kurzer visueller Effekt zur Bestätigung der Einsammlung
+        // Visueller Effekt: Blinken des Eco-Score-Labels
         let scaleUp = SKAction.scale(to: 1.5, duration: 0.1)
         let scaleDown = SKAction.scale(to: 1.0, duration: 0.1)
         ecoScoreLabel.run(SKAction.sequence([scaleUp, scaleDown]))
-        
         node.removeFromParent()
+        // Optional: Spiele einen Soundeffekt
+        SoundManager.shared.playSoundEffect(filename: "powerup.wav")
     }
     
     // MARK: – Game Over
@@ -239,11 +319,11 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         if gameOverState { return }
         gameOverState = true
         
-        // Stoppe den Helden und alle laufenden Aktionen
+        // Stoppe den Helden und alle Aktionen
         hero.removeFromParent()
         removeAllActions()
         
-        // Zeige den "Game Over"-Text an
+        // Zeige Game Over-Text
         let gameOverLabel = SKLabelNode(fontNamed: "AvenirNext-Bold")
         gameOverLabel.text = "Game Over!"
         gameOverLabel.fontSize = 48
@@ -252,7 +332,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         gameOverLabel.zPosition = 30
         addChild(gameOverLabel)
         
-        // Zeige einen Hinweis zum Neustarten
+        // Hinweis zum Neustarten
         let restartLabel = SKLabelNode(fontNamed: "AvenirNext-Bold")
         restartLabel.text = "Tippe, um neu zu starten"
         restartLabel.fontSize = 32
@@ -261,6 +341,9 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         restartLabel.name = "restart"
         restartLabel.zPosition = 30
         addChild(restartLabel)
+        
+        // Stoppe die Hintergrundmusik
+        SoundManager.shared.stopBackgroundMusic()
     }
     
     // MARK: – Neustart des Spiels
@@ -273,36 +356,11 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         }
     }
     
-    // MARK: – Zusätzliche Debug-Funktionen
-    override func didSimulatePhysics() {
-        // Hier könnten Debug-Informationen über physikalische Rahmen (Physics Bodies) angezeigt werden.
-        // Beispiel: Zeichne Rahmen um alle Knoten zur Fehlerdiagnose.
-    }
-    
-    // -------------------------------------------------------------------------------------
-    // Erweiterte Kommentare und Wiederholungen, um den Codeumfang zu erhöhen:
-    //
-    // Diese GameScene verwaltet den gesamten Spielablauf:
-    // - Sie aktualisiert den Score basierend auf der Zeit.
-    // - Sie steuert das Spawnen von Hindernissen und PowerUps.
-    // - Sie kümmert sich um Kollisionen und reagiert darauf.
-    // - Sie integriert den Helden und die Umgebung (Parallax-Scrolling).
-    //
-    // Kommentar: Der Spieler steuert den Helden durch Tippen (zum Springen).
-    // Kommentar: Sobald der Held ein Hindernis berührt, wird das Spiel beendet.
-    // Kommentar: Das Einsammeln von PowerUps erhöht den Eco-Score und belohnt den Spieler.
-    // Kommentar: Der Parallax-Effekt der Umgebung sorgt für Tiefe und ein lebendiges Gefühl.
-    //
-    // Diese Methode update(_:) wird jeden Frame aufgerufen und aktualisiert:
-    // - Die Zeit (deltaTime)
-    // - Den Score
-    // - Das Spawnen von neuen Objekten
-    // - Die Bewegung der Hintergrund-Layer
-    // -------------------------------------------------------------------------------------
-    
-    // Zusätzliche leere Zeilen zur Erhöhung des Codeumfangs:
-    
-    
+    // Zusätzliche Debugging-Kommentare:
+    // Kommentar: update(_:) wird jeden Frame aufgerufen und aktualisiert Spielzustände.
+    // Kommentar: Das Spiel reagiert auf Kollisionen, Eingaben und pausiert, wenn nötig.
+}
+
     
     
     
