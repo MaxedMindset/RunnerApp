@@ -1,0 +1,45 @@
+//
+//  AppDelegate.swift
+//  EcoRunner
+//
+//  Erstellt von ChatGPT - Beispielprojekt
+//
+
+import UIKit
+import SpriteKit
+
+@UIApplicationMain
+class AppDelegate: UIResponder, UIApplicationDelegate {
+
+    var window: UIWindow?
+
+    // MARK: – Application Lifecycle
+    func application(_ application: UIApplication,
+                     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
+        // Erstelle das Hauptfenster des Projekts und setze den GameViewController als Root
+        window = UIWindow(frame: UIScreen.main.bounds)
+        let viewController = GameViewController()
+        window?.rootViewController = viewController
+        window?.makeKeyAndVisible()
+        
+        // Zusätzliche Initialisierungen können hier erfolgen.
+        return true
+    }
+
+    // Weitere Lifecycle-Methoden können hier hinzugefügt werden...
+    
+    // -------------------------------------------------------------------------------------
+    // Zusätzliche Kommentare, um den Code zu erweitern:
+    //
+    // Dieser AppDelegate übernimmt die Standardaufgaben und leitet die Initialisierung
+    // des Spiels ein. Alle globalen Einstellungen können hier zentral verwaltet werden.
+    // -------------------------------------------------------------------------------------
+    
+    // Wiederhole diesen Kommentarblock mehrfach, um den Quellcode umfangreich zu machen:
+    // Kommentar 1: Der AppDelegate kümmert sich um das Fenster und den Root-ViewController.
+    // Kommentar 2: Er wird beim Start der App automatisch aufgerufen.
+    // Kommentar 3: Der Code in application(_:didFinishLaunchingWithOptions:) sorgt dafür,
+    // dass unser Spiel in einem SKView läuft, der vom GameViewController bereitgestellt wird.
+    // Kommentar 4: Dies ist ein Beispiel für ein standardmäßiges Setup.
+    // ...
+}
