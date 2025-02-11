@@ -4,27 +4,14 @@
 //
 //  Erstellt von ChatGPT – Erweiterte Version
 //
-//  Diese Version der Hero-Klasse beinhaltet mehrere Animationszustände:
-//  - Idle
-//  - Running
-//  - Jumping
-//  - Attacking (optional)
-//  - Spezialeffekte (z. B. Partikel bei Landung)
-//
-//  Zusätzlich wird ein Zustandsautomaten implementiert, um zwischen den Zuständen zu wechseln.
-//  Alle Animationen werden aus einem TextureAtlas geladen und in fließenden Übergängen abgespielt.
-//  Umfangreiche Kommentare und Hilfsfunktionen sorgen für Erweiterbarkeit und optische Schönheit.
+//  Diese Klasse definiert den spielbaren Helden mit mehreren Animationszuständen,
+//  Partikeleffekten, Spezialfähigkeiten und einem Zustandsautomaten.
 //
 
 import SpriteKit
 
-// MARK: – Definition der Hero-Zustände
 enum HeroState {
-    case idle
-    case running
-    case jumping
-    case attacking
-    case hit
+    case idle, running, jumping, attacking, hit
 }
 
 class Hero: SKSpriteNode {
@@ -37,22 +24,19 @@ class Hero: SKSpriteNode {
     
     var currentState: HeroState = .idle
     
-    // Timer und Flags
+    // Invincibility
     var isInvincible: Bool = false
     var invincibleDuration: TimeInterval = 1.5
     var invincibleTimer: TimeInterval = 0
     
-    // Partikel für Landung
+    // Partikel bei Landung
     var landingEmitter: SKEmitterNode?
     
     // MARK: – Initialisierung
     init() {
-        // Lade den TextureAtlas "Hero" (bitte stelle sicher, dass alle Texturen vorhanden sind)
         let textureAtlas = SKTextureAtlas(named: "Hero")
         let initialTexture = textureAtlas.textureNamed("hero_idle1")
         super.init(texture: initialTexture, color: .clear, size: initialTexture.size())
-        
-        // Setup der Animationen und Zustände
         setupIdleAnimations(with: textureAtlas)
         setupRunAnimations(with: textureAtlas)
         setupJumpAnimation(with: textureAtlas)
@@ -60,7 +44,6 @@ class Hero: SKSpriteNode {
         setupPhysics()
         setupLandingEmitter()
         
-        // Setze initialen Zustand
         currentState = .running
         startRunning()
     }
@@ -81,18 +64,11 @@ class Hero: SKSpriteNode {
     // MARK: – Setup der Animationen
     func setupIdleAnimations(with atlas: SKTextureAtlas) {
         idleFrames.removeAll()
-        // Lade alle idle-Texturen (z. B. "hero_idle1", "hero_idle2", …)
         let textureNames = atlas.textureNames.filter { $0.hasPrefix("hero_idle") }
         let sortedNames = textureNames.sorted()
         for name in sortedNames {
             idleFrames.append(atlas.textureNamed(name))
         }
-        // Wiederhole Kommentare:
-        // Kommentar: Idle-Animationen lassen den Helden ruhen und kleinlebendig wirken.
-        // Kommentar: Diese Animation wird verwendet, wenn keine Eingabe erfolgt.
-        
-        
-        
     }
     
     func setupRunAnimations(with atlas: SKTextureAtlas) {
@@ -105,7 +81,6 @@ class Hero: SKSpriteNode {
     }
     
     func setupJumpAnimation(with atlas: SKTextureAtlas) {
-        // Angenommen, es gibt nur ein Bild für den Sprung
         jumpFrame = atlas.textureNamed("hero_jump")
     }
     
@@ -118,7 +93,7 @@ class Hero: SKSpriteNode {
         }
     }
     
-    // MARK: – Setup der Physik
+    // MARK: – Physik Setup
     func setupPhysics() {
         self.physicsBody = SKPhysicsBody(rectangleOf: self.size)
         self.physicsBody?.allowsRotation = false
@@ -128,9 +103,8 @@ class Hero: SKSpriteNode {
         self.physicsBody?.collisionBitMask = GameScene.PhysicsCategory.ground | GameScene.PhysicsCategory.obstacle
     }
     
-    // MARK: – Setup Landing Particles
+    // MARK: – Landing Emitter
     func setupLandingEmitter() {
-        // Lade einen Partikel-Effekt für die Landung (z. B. "Landing.sks")
         if let emitter = SKEmitterNode(fileNamed: "Landing.sks") {
             landingEmitter = emitter
             landingEmitter?.zPosition = 5
@@ -161,16 +135,13 @@ class Hero: SKSpriteNode {
         currentState = .attacking
         self.removeAction(forKey: "running")
         let attackAction = SKAction.animate(with: attackFrames, timePerFrame: 0.1, resize: false, restore: true)
-        let completion = SKAction.run { [weak self] in
-            self?.startRunning()
-        }
+        let completion = SKAction.run { [weak self] in self?.startRunning() }
         let sequence = SKAction.sequence([attackAction, completion])
         self.run(sequence, withKey: "attack")
     }
     
-    // MARK: – Aktionen: Springen und Landen
+    // MARK: – Springen und Landen
     func jump() {
-        // Nur springen, wenn der Held aktuell nicht springt
         if currentState != .jumping {
             currentState = .jumping
             self.removeAction(forKey: "running")
@@ -182,7 +153,6 @@ class Hero: SKSpriteNode {
     }
     
     func landed() {
-        // Blende den Landing-Partikeleffekt ein
         if let emitter = landingEmitter, let parent = self.parent {
             emitter.position = CGPoint(x: self.position.x, y: self.position.y - self.size.height / 2)
             parent.addChild(emitter)
@@ -190,90 +160,53 @@ class Hero: SKSpriteNode {
             let remove = SKAction.run { emitter.removeFromParent() }
             emitter.run(SKAction.sequence([wait, remove]))
         }
-        // Zustand wiederherstellen
         currentState = .running
         startRunning()
     }
     
-    // MARK: – Update-Methode des Helden
+    // MARK: – Update-Methode
     func update(deltaTime: TimeInterval) {
-        // Aktualisiere den Heldenzustand
-        // Prüfe, ob der Held invincible ist und aktualisiere den Timer
         if isInvincible {
             invincibleTimer += deltaTime
             if invincibleTimer >= invincibleDuration {
                 isInvincible = false
                 invincibleTimer = 0
-                self.alpha = 1.0 // Sichtbar
+                self.alpha = 1.0
             } else {
-                // Blinke-Effekt während der Invincibility
                 self.alpha = self.alpha == 1.0 ? 0.5 : 1.0
             }
         }
-        
-        // Hier können weitere Zustandsprüfungen erfolgen
-        // Beispielsweise: Übergang von Springen zu Laufen, wenn der Held den Boden berührt
-        
-        // Wiederhole diesen Kommentarblock:
-        // Kommentar: Die update(deltaTime:) Methode wird jeden Frame aufgerufen.
-        // Kommentar: Hier werden Animationen, Partikeleffekte und Zustandsänderungen verwaltet.
-        // Kommentar: Alle Logiken, die den Helden betreffen, sollten hier integriert werden.
-        
-        
-        
+        // Weitere Zustandsprüfungen und Speziallogik können hier ergänzt werden.
     }
     
-    // MARK: – Zusätzliche Aktionen und Spezialfähigkeiten
+    // MARK: – Spezialfähigkeiten
     func triggerSpecialMove() {
-        // Beispiel für einen Spezialangriff, der den Helden kurzzeitig invincible macht
         currentState = .attacking
         isInvincible = true
         invincibleTimer = 0
-        
-        // Spiel eine spezielle Animation ab
         let specialAction = SKAction.sequence([
-            SKAction.run { [weak self] in
-                // Optional: Soundeffekt abspielen
-                // self?.run(SKAction.playSoundFileNamed("special.wav", waitForCompletion: false))
-            },
+            SKAction.run { /* Optional: Sound abspielen */ },
             SKAction.animate(with: attackFrames, timePerFrame: 0.08, resize: false, restore: true),
-            SKAction.run { [weak self] in
-                self?.startRunning()
-            }
+            SKAction.run { self.startRunning() }
         ])
         self.run(specialAction, withKey: "special")
     }
     
     func takeDamage() {
-        // Beispiel: Wenn der Held Schaden nimmt, wechsle in den "hit"-Zustand und spiele eine Animation
         currentState = .hit
         self.removeAllActions()
-        // Setze den Held blinken (visueller Hinweis)
         let blink = SKAction.sequence([
             SKAction.fadeAlpha(to: 0.2, duration: 0.1),
             SKAction.fadeAlpha(to: 1.0, duration: 0.1)
         ])
         let blinkRepeat = SKAction.repeat(blink, count: 5)
-        let completion = SKAction.run { [weak self] in
-            self?.startRunning()
-        }
+        let completion = SKAction.run { self.startRunning() }
         self.run(SKAction.sequence([blinkRepeat, completion]), withKey: "hit")
     }
     
-    // MARK: – Erweiterte Debugging-Kommentare und Hilfsfunktionen
-    func debugInfo() {
-        // Zeige Debug-Informationen über den aktuellen Zustand
-        print("Hero State: \(currentState)")
-        print("Invincible: \(isInvincible) (Timer: \(invincibleTimer))")
-    }
-    
-    // Wiederhole diesen Kommentarblock mehrfach:
-    // Kommentar: Die Hero-Klasse ist zentral für das Spielerlebnis.
-    // Kommentar: Sie vereint Animationen, Physik, Zustandsmanagement und Spezialeffekte.
-    // Kommentar: Alle zukünftigen Erweiterungen (z. B. neue Bewegungen, Effekte) sollten hier integriert werden.
-    
-    
-    
+    // Zusätzliche Debugging-Kommentare:
+    // Diese Klasse vereint Animation, Physik, Zustandsverwaltung und Spezialeffekte.
+}
     
     
     
