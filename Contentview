@@ -1,0 +1,56 @@
+//
+//  ContentView.swift
+//  EcoRunner
+//
+//  Erstellt von ChatGPT
+//
+//  Diese Datei definiert eine SwiftUI-ContentView, die ein SKView einbettet, um
+//  die Spielszene (hier z. B. MainMenuScene) anzuzeigen. So kannst du den gesamten
+//  Spiel-Content in einem SwiftUI-Projekt integrieren.
+//
+
+import SwiftUI
+import SpriteKit
+
+// MARK: - GameViewRepresentable
+/// Dieses UIViewRepresentable bindet einen SKView ein und lädt die gewünschte SpriteKit-Szene.
+struct GameViewRepresentable: UIViewRepresentable {
+    
+    /// Erstelle und konfiguriere die SKView.
+    func makeUIView(context: Context) -> SKView {
+        let skView = SKView(frame: UIScreen.main.bounds)
+        // Debug-Optionen (optional)
+        skView.showsFPS = true
+        skView.showsNodeCount = true
+        skView.ignoresSiblingOrder = true
+        
+        // Erstelle die Szene – hier wird als Beispiel das MainMenuScene verwendet.
+        // Du kannst hier auch direkt die GameScene laden, wenn gewünscht.
+        let scene = MainMenuScene(size: skView.bounds.size)
+        scene.scaleMode = .aspectFill
+        skView.presentScene(scene)
+        
+        return skView
+    }
+    
+    /// Aktualisiert die SKView – aktuell keine speziellen Updates notwendig.
+    func updateUIView(_ uiView: SKView, context: Context) {
+        // Hier können dynamische Updates vorgenommen werden, falls erforderlich.
+    }
+}
+
+// MARK: - ContentView
+/// Die ContentView bettet das GameViewRepresentable ein und erstreckt sich über den gesamten Bildschirm.
+struct ContentView: View {
+    var body: some View {
+        GameViewRepresentable()
+            .edgesIgnoringSafeArea(.all)
+    }
+}
+
+// MARK: - Preview
+struct ContentView_Previews: PreviewProvider {
+    static var previews: some View {
+        ContentView()
+    }
+}
